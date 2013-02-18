@@ -21,13 +21,13 @@ applications:
           input_label: "Enter a priority from 1 to 10 to assign to the selected job(s) (1 = lowest, 10 = highest):"
     menus:
       manage:pqueue:
-        label: Publish Queue
+        label: Publish Queue Jobs
         order: 1000
         mode: PQManager.list
         view: system
         permission: administer
       system:pqueue:
-        label: Publish Queue
+        label: Publish Queue Jobs
         order: 600
         mode: PQManager.list
         permission: administer
