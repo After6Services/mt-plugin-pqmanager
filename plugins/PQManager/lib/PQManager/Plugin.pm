@@ -186,4 +186,301 @@ sub mode_list_queue {
     });
 }
 
+# Need to work some magic here: because the ts_job table has no `id` column,
+# some things like list_actions don't work. Do some juggling to copy the `jobid`
+# into the `id`, and that makes things work as needed.
+sub list_template_param {
+    my ( $cb, $app, $param, $tmpl ) = @_;
+
+    # When looking for the old value, escape the `[` and `]` so that they aren't
+    # interpretted as character class searches in the regex below.
+    my $old = 'var id = objs\[row\]\[0\]';
+    my $new = 'var id = objs[row][1]';
+
+    my $text = $tmpl->text;
+    $text =~ s/$old/$new/;
+    $tmpl->text( $text );
+}
+
+# The MT5 Listing Framework properties.
+sub list_properties {
+    # Since we're most often specifically working with the PQ items, load that
+    # function so that it can be easily referenced anywhere.
+    my $worker_func = MT->model('ts_funcmap')->load({
+        funcname => 'MT::Worker::Publish',
+    });
+
+    return {
+        jobid => {
+            base    => '__virtual.integer',
+            label   => 'Job ID',
+            order   => 100,
+            display => 'force',
+            col     => 'jobid',
+        },
+        insert_time => {
+            base    => '__virtual.date',
+            label   => 'Insert Date',
+            display => 'default',
+            col     => 'insert_time',
+            html    => sub {
+                my $prop = shift;
+                my ( $obj, $app, $opts ) = @_;
+                my $insert_time = $prop->raw(@_) or return '';
+                my $ts          = epoch2ts(undef, $insert_time);
+                my $date_format = MT::App::CMS::LISTING_DATE_FORMAT();
+                my $is_relative
+                    = ( $app->user->date_format || 'relative' ) eq
+                    'relative' ? 1 : 0;
+                return $is_relative
+                    ? MT::Util::relative_date( $ts, time, undef )
+                    : MT::Util::format_ts(
+                        $date_format,
+                        $ts,
+                        undef,
+                        $app->user ? $app->user->preferred_language
+                        : undef
+                    );
+            },
+        },
+        priority => {
+            base               => '__virtual.integer',
+            label              => 'Priority',
+            display            => 'default',
+            col                => 'priority',
+            order              => 200,
+            default_sort_order => 'descend',
+            html               => sub {
+                my $prop = shift;
+                my ( $obj, $app, $opts ) = @_;
+                my $html = $obj->priority;
+                
+                # Include the spinning "working" indicator if it's been grabbed.
+                if ( $obj->grabbed_until ) {
+                    $html .= ' <img src="' . $app->static_path
+                        . 'images/ani-rebuild.gif" width="20" height="20" />'
+                }
+
+                return $html;
+            },
+        },
+        worker => {
+            base      => '__virtual.string',
+            label     => 'Worker',
+            display   => 'optional',
+            order     => 300,
+            bulk_html => sub {
+                my $prop   = shift;
+                my ($objs) = @_;
+
+                # Grab all of the function maps and create a hash for easy
+                # lookup against all objects in the ts_job table.
+                my @funcmaps = MT->model('ts_funcmap')->load();
+                my $func = {};
+                foreach my $funcmap (@funcmaps) {
+                    $func->{ $funcmap->funcid } = $funcmap->funcname;
+                }
+
+                my @out;
+                foreach my $obj (@$objs) {
+                    push @out, $func->{ $obj->funcid };
+                }
+                return @out;
+            },
+            bulk_sort => sub {
+                my $prop   = shift;
+                my ($objs) = @_;
+
+                # Create a hash relating the jobid to the blog name.
+                my $jobid_blog = {};
+                foreach my $obj (@$objs) {
+                    my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
+                        or next;
+
+                    my $blog = MT->model('blog')->load( $fi->blog_id )
+                        or next;
+
+                    $jobid_blog->{ $obj->jobid } = $blog->name;
+                }
+
+                # Use the has created above to sort by blog name and return the
+                # result!
+                return sort {
+                    lc( $jobid_blog->{ $a->jobid } )
+                        cmp lc( $jobid_blog->{ $b->jobid } )
+                } @$objs;
+            },
+            # Can't be filtered. Well, I think it *could* be if a join were done
+            # to the fileinfo table, but I havne't tried that.
+            filter_editable => 0,
+        },
+        blog_name => {
+            label        => 'Website/Blog Name',
+            filter_label => '__WEBSITE_BLOG_NAME',
+            order        => 400,
+            display      => 'default',
+            site_name    => 1,
+            view         => [ 'system', 'website' ],
+            bulk_html    => sub {
+                my $prop   = shift;
+                my ($objs) = @_;
+
+                # Grab the blog IDs from the fileinfo record, and use those to
+                # build the Website/Blog Name labels.
+                my @out;
+                foreach my $obj (@$objs) {
+                    my $fi  = MT->model('fileinfo')->load( $obj->uniqkey );
+                    if (!$fi) {
+                        push @out, ''; # Blank, no Website/Blog Name to report.
+                        next;
+                    }
+
+                    my $blog = MT->model('blog')->load( $fi->blog_id );
+                    if (!$blog) {
+                        push @out, ''; # Blank, no Website/Blog Name to report.
+                        next;
+                    }
+
+                    my $website = MT->model('website')->load( $blog->parent_id );
+                    if (!$website) {
+                        push @out, $blog->name; # Only the blog name exists.
+                        next;
+                    }
+
+                    # Assemble the blog name and website name for the label.
+                    push @out, join( '/', $website->name, $blog->name );
+                }
+
+                return @out;
+            },
+            bulk_sort => sub {
+                my $prop   = shift;
+                my ($objs) = @_;
+
+                # Create a hash relating the jobid to the blog name.
+                my $jobid_blog = {};
+                foreach my $obj (@$objs) {
+                    my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
+                        or next;
+
+                    my $blog = MT->model('blog')->load( $fi->blog_id )
+                        or next;
+
+                    $jobid_blog->{ $obj->jobid } = $blog->name;
+                }
+
+                # Use the has created above to sort by blog name and return the
+                # result!
+                return sort {
+                    lc( $jobid_blog->{ $a->jobid } )
+                         cmp lc( $jobid_blog->{ $b->jobid } )
+                } @$objs;
+            },
+        },
+        template => {
+            base    => '__virtual.string',
+            label   => 'Template',
+            display => 'default',
+            order   => 500,
+            html    => sub {
+                my $prop = shift;
+                my ( $obj, $app, $opts ) = @_;
+                # If this isn't a MT::Worker::Publish worker, then just give up
+                # because there is no template associated.
+                return '' if $obj->funcid != $worker_func->funcid;
+
+                my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
+                    or return 'fileinfo record not found';
+
+                my $tmpl = MT->model('template')->load( $fi->template_id )
+                    or return 'template not found';
+                return $tmpl->name;
+            },
+            bulk_sort => sub {
+                my $prop   = shift;
+                my ($objs) = @_;
+
+                # Create a hash relating the jobid to the template name.
+                my $jobid_tmplname = {};
+                foreach my $obj (@$objs) {
+                    my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
+                        or next;
+
+                    my $tmpl = MT->model('template')->load( $fi->template_id )
+                        or next;
+
+                    $jobid_tmplname->{ $obj->jobid } = $tmpl->name;
+                }
+
+                # Use the has created above to sort by template name and return
+                # the result!
+                return sort {
+                    lc( $jobid_tmplname->{ $a->jobid } )
+                        cmp lc( $jobid_tmplname->{ $b->jobid } )
+                } @$objs;
+            },
+            # Can't be filtered. Well, I think it *could* be if a join were done
+            # to the fileinfo table, but I havne't tried that.
+            filter_editable => 0,
+        },
+        file_path => {
+            base    => '__virtual.string',
+            label   => 'File Path',
+            display => 'force',
+            order   => 600,
+            html    => sub {
+                my $prop = shift;
+                my ( $obj, $app, $opts ) = @_;
+                # If this isn't a MT::Worker::Publish worker, then just give up
+                # because there is no template associated.
+                return '' if $obj->funcid != $worker_func->funcid;
+
+                my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
+                    or return 'fileinfo record not found';
+
+                return $fi->file_path;
+            },
+            bulk_sort => sub {
+                my $prop   = shift;
+                my ($objs) = @_;
+
+                # Create a hash relating the jobid to the file path.
+                my $jobid_file = {};
+                foreach my $obj (@$objs) {
+                    my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
+                        or next;
+
+                    $jobid_file->{ $obj->jobid } = $fi->file_path;
+                }
+
+                # Use the has created above to sort by file path and return
+                # the result!
+                return sort {
+                    lc( $jobid_file->{ $a->jobid } )
+                        cmp lc( $jobid_file->{ $b->jobid } )
+                } @$objs;
+            },
+            # Can't be filtered. Well, I think it *could* be if a join were done
+            # to the fileinfo table, but I havne't tried that.
+            filter_editable => 0,
+        },
+    };
+}
+
+# The following two functions work together to decide how menus are shown in MT.
+sub mt5_menu_condition {
+    # This is MT5.x; display the Tools > Publish Queue menu item.
+    return 1 if MT->product_version =~ /^5/;
+    # This is MT4 or something else; don't display Tools > Publish Queue
+    # because it exists at Manage > Publish Queue.
+    return 0;
+}
+sub mt4_menu_condition {
+    # This is MT4.x; display the Manage > Publish Queue menu item.
+    return 1 if MT->product_version =~ /^4/;
+    # This is MT5 or something else; don't display Manage > Publish Queue
+    # because it exists at Tools > Publish Queue.
+    return 0;
+}
+
 1;
