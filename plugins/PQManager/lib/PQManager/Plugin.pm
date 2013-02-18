@@ -8,6 +8,10 @@ use MT::Util qw( relative_date epoch2ts iso2ts );
 use warnings;
 use Carp;
 
+use MT::TheSchwartz;
+use MT::TheSchwartz::Error;
+
+# A feature of Melody Maker.
 sub status_job_queue {
     my $app = shift;
     my ($ctx) = @_;
@@ -15,57 +19,53 @@ sub status_job_queue {
     return MT->model('ts_job')->count();
 }
 
+# The "delete" button on the listing screen.
 sub mode_delete {
     my $app = shift;
     $app->validate_magic or return;
 
-    require MT::TheSchwartz::Job;
     my @jobs = $app->param('id');
     for my $job_id (@jobs) {
-        my $job = MT::TheSchwartz::Job->load({jobid => $job_id}) or next;
-        $job->remove();
+        my $job = MT->model('ts_job')->load({jobid => $job_id})
+            or next;
+        $job->remove or die $job->errstr;
     }
-    $app->redirect(
-            $app->uri(
-                'mode' => 'PQManager.list',
-                args   => {
-                    deleted => 1,
-                }
-            )
-        );
+
+    $app->add_return_arg( deleted => 1 );
+    $app->call_return;
 }
 
+# The "Change Priority" option on the listing screen.
 sub mode_priority {
     my $app = shift;
     $app->validate_magic or return;
+    my $q = $app->can('query') ? $app->query : $app->param;
 
-    my $pri = $app->param('itemset_action_input');
+    my $pri = $q->param('itemset_action_input');
     if ($pri !~ /^[0-9]+$/) {
         return $app->error("You must enter a number between 1 and 10.");
     }
 
-    require MT::TheSchwartz::Job;
-    my @jobs = $app->param('id');
+    my @jobs = $q->param('id');
     for my $job_id (@jobs) {
-        my $job = MT::TheSchwartz::Job->load({jobid => $job_id}) or next;
+        my $job = MT->model('ts_job')->load({jobid => $job_id})
+            or next;
         $job->priority($pri);
-        $job->save();
+        $job->save or die $job->errstr;
     }
-    $app->redirect(
-            $app->uri(
-                'mode' => 'PQManager.list',
-                args => {
-                    priority => $pri,
-                }
-            )
-        );
+
+    $app->add_return_arg( priority => $pri );
+    $app->call_return;
 }
 
+# The listing screen (for MT4 only).
 sub mode_list_queue {
     my $app = shift;
     my %param = @_;
-    my $q = $app->{query};
+    my $q = $app->can('query') ? $app->query : $app->param;
 
+    # Redirect to the blog dashboard if a blog_id is specified, since the PQ
+    # doesn't work on a blog-specific basis.
     if (my $blog = $app->blog) {
         $app->redirect(
             $app->uri(
