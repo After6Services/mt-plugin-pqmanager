@@ -287,7 +287,7 @@ sub list_properties {
                     $jobid_blog->{ $obj->jobid } = $blog->name;
                 }
 
-                # Use the has created above to sort by blog name and return the
+                # Use the hash created above to sort by blog name and return the
                 # result!
                 return sort {
                     lc( $jobid_blog->{ $a->jobid } )
@@ -353,7 +353,7 @@ sub list_properties {
                     $jobid_blog->{ $obj->jobid } = $blog->name;
                 }
 
-                # Use the has created above to sort by blog name and return the
+                # Use the hash created above to sort by blog name and return the
                 # result!
                 return sort {
                     lc( $jobid_blog->{ $a->jobid } )
@@ -396,7 +396,7 @@ sub list_properties {
                     $jobid_tmplname->{ $obj->jobid } = $tmpl->name;
                 }
 
-                # Use the has created above to sort by template name and return
+                # Use the hash created above to sort by template name and return
                 # the result!
                 return sort {
                     lc( $jobid_tmplname->{ $a->jobid } )
@@ -437,7 +437,7 @@ sub list_properties {
                     $jobid_file->{ $obj->jobid } = $fi->file_path;
                 }
 
-                # Use the has created above to sort by file path and return
+                # Use the hash created above to sort by file path and return
                 # the result!
                 return sort {
                     lc( $jobid_file->{ $a->jobid } )
