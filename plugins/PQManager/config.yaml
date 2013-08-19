@@ -66,6 +66,7 @@ listing_screens:
             - 'template'
             - 'file_path'
         default_sort_key: 'priority'
+        view: system
         # Plural is not defined in MT::TheSchwartz::Job, so define it here.
         object_label_plural: 'Jobs'
         # Because the ts_job table doesn't have an `id` column, specify a
