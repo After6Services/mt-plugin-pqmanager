@@ -6,7 +6,6 @@ author_name: Endevver
 author_link: http://endevver.com/
 plugin_link: https://github.com/endevver/mt-plugin-pqmanager
 static_version: 1
-schema_version: 1
 
 applications:
   cms:
@@ -69,16 +68,9 @@ listing_screens:
         default_sort_key: 'priority'
         # Plural is not defined in MT::TheSchwartz::Job, so define it here.
         object_label_plural: 'Jobs'
+        # Because the ts_job table doesn't have an `id` column, specify a
+        # column to be used in its place.
+        id_column: jobid
 
 list_properties:
     ts_job: $PQManager::PQManager::Plugin::list_properties
-
-object_types:
-    ts_job:
-        # Adding the ID column is necessary to get the Listing Framework to
-        # display this table.
-        id: integer not null
-
-callbacks:
-    MT::App::CMS::list_template_param.ts_job: $PQManager::PQManager::Plugin::list_template_param
-

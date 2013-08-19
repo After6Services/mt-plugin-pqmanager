@@ -186,22 +186,6 @@ sub mode_list_queue {
     });
 }
 
-# Need to work some magic here: because the ts_job table has no `id` column,
-# some things like list_actions don't work. Do some juggling to copy the `jobid`
-# into the `id`, and that makes things work as needed.
-sub list_template_param {
-    my ( $cb, $app, $param, $tmpl ) = @_;
-
-    # When looking for the old value, escape the `[` and `]` so that they aren't
-    # interpretted as character class searches in the regex below.
-    my $old = 'var id = objs\[row\]\[0\]';
-    my $new = 'var id = objs[row][1]';
-
-    my $text = $tmpl->text;
-    $text =~ s/$old/$new/;
-    $tmpl->text( $text );
-}
-
 # The MT5 Listing Framework properties.
 sub list_properties {
     # Since we're most often specifically working with the PQ items, load that

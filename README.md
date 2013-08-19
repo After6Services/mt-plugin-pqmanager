@@ -9,7 +9,7 @@ what is happening at any given time!
 # Prerequisites
 
 * Movable Type 4.2 or later
-* Movable Type 5.1x or later
+* Movable Type 5.2.6 or later
 
 # Installation
 
