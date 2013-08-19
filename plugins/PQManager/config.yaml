@@ -18,7 +18,7 @@ applications:
           label: Change Priority
           code: $PQManager::PQManager::Plugin::mode_priority
           input: 1
-          input_label: "Enter a priority from 1 to 10 to assign to the selected job(s) (1 = lowest, 10 = highest):"
+          input_label: "Enter a priority to assign to the selected job(s), typically from 1 to 10 (1 = lowest, 10 = highest):"
           no_prompt: 1
         delete:
           label: 'Delete'

@@ -43,7 +43,7 @@ sub mode_priority {
 
     my $pri = $q->param('itemset_action_input');
     if ($pri !~ /^[0-9]+$/) {
-        return $app->error("You must enter a number between 1 and 10.");
+        return $app->error("A priority must be an integer, typically between 1 and 10.");
     }
 
     my @jobs = $q->param('id');
