@@ -23,10 +23,21 @@ sub status_job_queue {
 sub mode_delete {
     my $app = shift;
     $app->validate_magic or return;
+    my $q = $app->can('query') ? $app->query : $app->param;
 
-    my @jobs = $app->param('id');
+    # Grab the Jobs that have been selected.
+    my @jobs = $q->param('id');
+
+    # If "select all xxx items" was chosen, select them all.
+    if ( $q->param('all_selected') ) {
+        my $iter = $app->model('ts_job')->load_iter();
+        while ( my $job = $iter->() ) {
+            push @jobs, $job->jobid;
+        }
+    }
+
     for my $job_id (@jobs) {
-        my $job = MT->model('ts_job')->load({jobid => $job_id})
+        my $job = $app->model('ts_job')->load({jobid => $job_id})
             or next;
         $job->remove or die $job->errstr;
     }
@@ -46,9 +57,19 @@ sub mode_priority {
         return $app->error("A priority must be an integer, typically between 1 and 10.");
     }
 
+    # Grab the Jobs that have been selected.
     my @jobs = $q->param('id');
+
+    # If "select all xxx items" was chosen, select them all.
+    if ( $q->param('all_selected') ) {
+        my $iter = $app->model('ts_job')->load_iter();
+        while ( my $job = $iter->() ) {
+            push @jobs, $job->jobid;
+        }
+    }
+
     for my $job_id (@jobs) {
-        my $job = MT->model('ts_job')->load({jobid => $job_id})
+        my $job = $app->model('ts_job')->load({jobid => $job_id})
             or next;
         $job->priority($pri);
         $job->save or die $job->errstr;
