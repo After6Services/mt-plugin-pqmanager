@@ -475,7 +475,7 @@ sub list_properties {
 # The following two functions work together to decide how menus are shown in MT.
 sub mt5_menu_condition {
     # This is MT5.x; display the Tools > Publish Queue menu item.
-    return 1 if MT->product_version =~ /^5/;
+    return 1 if MT->product_version !~ /^4/;
     # This is MT4 or something else; don't display Tools > Publish Queue
     # because it exists at Manage > Publish Queue.
     return 0;
