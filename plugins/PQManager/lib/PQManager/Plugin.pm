@@ -220,7 +220,7 @@ sub list_properties {
             base    => '__virtual.integer',
             label   => 'Job ID',
             order   => 100,
-            display => 'force',
+            display => 'default',
             col     => 'jobid',
         },
         insert_time => {
@@ -390,16 +390,25 @@ sub list_properties {
             html    => sub {
                 my $prop = shift;
                 my ( $obj, $app, $opts ) = @_;
-                # If this isn't a MT::Worker::Publish worker, then just give up
-                # because there is no template associated.
-                return '' if $obj->funcid != $worker_func->funcid;
 
-                my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
-                    or return 'fileinfo record not found';
+                if ($obj->funcid == $worker_func->funcid) {
+                    my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
+                        or return 'fileinfo record not found';
 
-                my $tmpl = MT->model('template')->load( $fi->template_id )
-                    or return 'template not found';
-                return $tmpl->name;
+                    my $tmpl = MT->model('template')->load( $fi->template_id )
+                        or return 'template not found';
+
+                    return $tmpl->name;
+                }
+                else {
+                    # If this isn't a MT::Worker::Publish worker, then just
+                    # give up because there is no template associated.
+                    my $worker = MT->model('ts_funcmap')->load({
+                        funcid => $obj->funcid,
+                    });
+
+                    return '*' . $worker->funcname . '*';
+                }
             },
             bulk_sort => sub {
                 my $prop   = shift;
@@ -436,14 +445,22 @@ sub list_properties {
             html    => sub {
                 my $prop = shift;
                 my ( $obj, $app, $opts ) = @_;
-                # If this isn't a MT::Worker::Publish worker, then just give up
-                # because there is no template associated.
-                return '' if $obj->funcid != $worker_func->funcid;
 
-                my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
-                    or return 'fileinfo record not found';
+                if ($obj->funcid == $worker_func->funcid) {
+                    my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
+                        or return 'fileinfo record not found';
 
-                return $fi->file_path;
+                    return $fi->file_path;
+                }
+                else {
+                    # If this isn't a MT::Worker::Publish worker, then just
+                    # give up because there is no template associated.
+                    my $worker = MT->model('ts_funcmap')->load({
+                        funcid => $obj->funcid,
+                    });
+
+                    return '*' . $worker->funcname . '*';
+                }
             },
             bulk_sort => sub {
                 my $prop   = shift;
