@@ -325,7 +325,7 @@ sub list_properties {
             order        => 400,
             display      => 'default',
             site_name    => 1,
-            view         => [ 'system', 'website' ],
+            view         => [ 'system', 'website', 'blog' ],
             bulk_html    => sub {
                 my $prop   = shift;
                 my ($objs) = @_;
@@ -487,20 +487,247 @@ sub list_properties {
     };
 }
 
-# The following two functions work together to decide how menus are shown in MT.
-sub mt5_menu_condition {
-    # This is MT5.x; display the Tools > Publish Queue menu item.
-    return 1 if MT->product_version !~ /^4/;
-    # This is MT4 or something else; don't display Tools > Publish Queue
-    # because it exists at Manage > Publish Queue.
-    return 0;
+sub menus {
+    my $app = MT->instance;
+
+    # Find the MT::Worker::Publisher funcid, which is used to figure out how
+    # many job there are. This is used in the MT5 menu options below.
+    my $funcmap = $app->model('ts_funcmap')->load({
+        funcname => 'MT::Worker::Publish',
+    });
+
+    # Are there *only* non-publishing workers? Use them to determine if the
+    # `mode` and `args` keys should be included, which is how the menu
+    # highlight is added.
+    my $only_non_publish_workers = 0;
+    if (
+        $app->model('ts_job')->exist(
+            { funcid => { not => $funcmap->funcid }, },
+        )
+        && !$app->model('ts_job')->exist(
+            { funcid => $funcmap->funcid },
+        )
+    ) {
+        $only_non_publish_workers = 1;
+    }
+
+    return {
+        # MT5
+        'pq_monitor' => {
+            label => pq_monitor_menu_label($app, $funcmap),
+            order => 1000,
+            mode  => 'list',
+            args  => {
+                '_type'   => 'ts_job',
+                'blog_id' => '0', # Always blog ID 0, system.
+            },
+            permission => 'administer',
+            condition  => sub {
+                return 1 if MT->product_version !~ /^4/; # MT5 only
+                return 0;
+            },
+        },
+        # We must add the `mode` and `args` keys to the menu sub-item to make
+        # the menu functional.
+        # The `status` item is added just in case there are no other jobs in
+        # the PQ, forcing the menu to show.
+        'pq_monitor:status' => {
+            label => 'No jobs in the Publish Queue',
+            order => 1,
+            view  => [ "system", "blog", "website" ],
+            mode  => 'list',
+            args  => {
+                '_type'   => 'ts_job',
+                'blog_id' => '0', # Always blog ID 0, system.
+            },
+            permission => 'administer',
+            condition  => sub {
+                # Only display if there are *no* jobs in the PQ.
+                my $result = $app->model('ts_job')->exist();
+                return 0 if $result; # There are jobs, so hide.
+                return 1;            # There are no jobs, so display.
+            },
+        },
+        # "Newest publish job: inserted 5 minutes ago"
+        'pq_monitor:newest' => {
+            label => pq_monitor_age_menu_label($app, $funcmap, 'descend'),
+            order => 10,
+            view  => [ "system", "blog", "website" ],
+            mode  => 'list',
+            args  => {
+                '_type'   => 'ts_job',
+                'blog_id' => '0', # Always blog ID 0, system.
+            },
+            permission => 'administer',
+            condition  => sub {
+                return $app->model('ts_job')->exist(
+                    { funcid => $funcmap->funcid, },
+                ) || 0;
+            },
+        },
+        # "Oldest publish job: inserted 40 minutes ago"
+        'pq_monitor:oldest' => {
+            label      => pq_monitor_age_menu_label($app, $funcmap, 'ascend'),
+            order      => 11,
+            condition  => sub {
+                return $app->model('ts_job')->exist(
+                    { funcid => $funcmap->funcid, },
+                ) || 0;
+            },
+        },
+        # "2 non-publisher jobs: Bob Rebuilder, Reblog Import"
+        'pq_monitor:other' => {
+            label => pq_monitor_other_jobs_menu_label($app, $funcmap),
+            order => 20,
+            view  => [ "system", "blog", "website" ],
+            mode  => ($only_non_publish_workers ? 'list' : ''),
+            args  => {
+                '_type'   => 'ts_job',
+                'blog_id' => '0', # Always blog ID 0, system.
+            },
+            permission => 'administer',
+            condition  => sub {
+                return $app->model('ts_job')->exist(
+                    { funcid => { not => $funcmap->funcid }, },
+                ) || 0;
+            },
+        },
+        # MT4
+        'manage:pqueue' => {
+            label      => 'Publish Queue Jobs',
+            order      => 1000,
+            mode       => 'PQManager.list',
+            view       => 'system',
+            permission => 'administer',
+            condition  => sub {
+                return 1 if MT->product_version =~ /^4/; # MT4 only
+                return 0;
+            },
+        },
+        'system:pqueue' => {
+            label      => 'Publish Queue Jobs',
+            order      => 1000,
+            mode       => 'PQManager.list',
+            view       => 'system',
+            permission => 'administer',
+            condition  => sub {
+                return 1 if MT->product_version =~ /^4/; # MT4 only
+                return 0;
+            },
+        },
+    };
 }
-sub mt4_menu_condition {
-    # This is MT4.x; display the Manage > Publish Queue menu item.
-    return 1 if MT->product_version =~ /^4/;
-    # This is MT5 or something else; don't display Manage > Publish Queue
-    # because it exists at Tools > Publish Queue.
-    return 0;
+
+# MT5+ surfaces a top-level menu to deliver status information about what is in
+# the Publish Queue. It also gets a special label that includes the job count.
+sub pq_monitor_menu_label {
+    my ($app)     = shift;
+    my ($funcmap) = shift;
+
+    my $count = $app->model('ts_job')->count({
+        funcid => $funcmap->funcid,
+    });
+
+    return <<LABEL;
+<span title="There are currently $count items in the Publish Queue.">
+    PQ Jobs
+    <span class="pq-count">$count</span>
+</span>
+<style type="text/css">
+    .pq-count {
+        position: absolute;
+        right: 25px;
+        top: 4px;
+        display: block;
+        background: #f8b500;
+        color: #fff;
+        text-align: center;
+        min-width: 12px;
+        float: right;
+        -webkit-border-radius: 10px;
+        -moz-border-radius: 10px;
+        border-radius: 10px;
+        padding: 0px 3px 2px;
+        font-weight: normal;
+    }
+</style>
+LABEL
+}
+
+# The newest/oldest publishing job was added to the queue x minutes ago.
+sub pq_monitor_age_menu_label {
+    my ($app)     = shift;
+    my ($funcmap) = shift;
+    my ($order)   = shift;
+
+    my $job = $app->model('ts_job')->load(
+        {
+            funcid => $funcmap->funcid,
+        },
+        {
+            sort      => 'insert_time',
+            direction => $order,
+            limit     => 1,
+        }
+    );
+    my $insert_time = $job ? $job->insert_time : '';
+
+    my $ts          = epoch2ts(undef, $insert_time);
+    my $date_format = MT::App::CMS::LISTING_DATE_FORMAT();
+    my $is_relative
+        = ( $app->user->date_format || 'relative' ) eq
+        'relative' ? 1 : 0;
+    my $relative_time = $is_relative
+        ? MT::Util::relative_date( $ts, time, undef )
+        : MT::Util::format_ts(
+            $date_format,
+            $ts,
+            undef,
+            $app->user ? $app->user->preferred_language
+            : undef
+        );
+
+    my $age_label = $order eq 'descend' ? 'Newest' : 'Oldest';
+
+    return "$age_label publish job: inserted $relative_time";
+}
+
+# Show non-publisher jobs, too, such as Reblog and Bob the Rebuilder.
+sub pq_monitor_other_jobs_menu_label {
+    my ($app)     = shift;
+    my ($funcmap) = shift;
+
+    my $additional_jobs = $app->model('ts_job')->count({
+        funcid => { not => $funcmap->funcid },
+    }) || '0';
+
+    my @other_workers = $app->model('ts_funcmap')->load(
+        {
+            funcid => { not => $funcmap->funcid },
+        },
+        {
+            join => MT::TheSchwartz::Job->join_on(
+                'funcid',
+                undef,
+                {
+                    unique => 1,
+                },
+            ),
+        }
+    );
+    
+    my @workers;
+    foreach my $other_worker (@other_workers) {
+        my $funcname = $other_worker->funcname;
+        # Strip the "::Worker::" out of the name simply to help conserve space.
+        $funcname =~ s/::Worker::/ /;
+        push @workers, '&bull; '.$funcname;
+    }
+
+    my $plural = scalar @workers == 1 ? '' : 's';
+
+    return "$additional_jobs non-publisher job$plural:<br />"
+        . join("<br />", @workers);
 }
 
 1;

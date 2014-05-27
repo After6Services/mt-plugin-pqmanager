@@ -24,31 +24,7 @@ applications:
           label: 'Delete'
           mode: PQManager.delete
           button: 1
-    menus:
-      # MT5
-      tools:pqueue:
-        label: Publish Queue Jobs
-        order: 1000
-        mode: list
-        args:
-            _type: ts_job
-        view: system
-        permission: administer
-        condition: $PQManager::PQManager::Plugin::mt5_menu_condition
-      # MT4
-      manage:pqueue:
-        label: Publish Queue Jobs
-        order: 1000
-        mode: PQManager.list
-        view: system
-        permission: administer
-        condition: $PQManager::PQManager::Plugin::mt4_menu_condition
-      system:pqueue:
-        label: Publish Queue Jobs
-        order: 600
-        mode: PQManager.list
-        permission: administer
-        condition: $PQManager::PQManager::Plugin::mt4_menu_condition
+    menus: $PQManager::PQManager::Plugin::menus
 
 # A feature of Melody Maker.
 status_widgets:
@@ -66,7 +42,7 @@ listing_screens:
             - 'template'
             - 'file_path'
         default_sort_key: 'priority'
-        view: system
+        scope_mode: none
         # Plural is not defined in MT::TheSchwartz::Job, so define it here.
         object_label_plural: 'Jobs'
         # Because the ts_job table doesn't have an `id` column, specify a

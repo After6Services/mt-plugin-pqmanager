@@ -10,6 +10,7 @@ what is happening at any given time!
 
 * Movable Type 4.2 or later
 * Movable Type 5.2.6 or later
+* Movable Type 6 or later
 
 # Installation
 
@@ -19,10 +20,18 @@ http://tinyurl.com/easy-plugin-install
 
 # Usage
 
-To view and manage your queue, visit the Tools > Publish Queue Jobs menu option
-that is accessible from the System Dashboard (Manage > Publish Queue Jobs in
-MT4). In MT4, Publish Queue Jobs can also be found in the System Overview menu
-in the upper-right of the screen.
+The Publish Queue Manager provides an at-a-glance review of the contents of the Publish Queue by adding a "PQ Jobs" menu to Movable Type. Information provided:
+
+* A highlighted count of the number of publishing-related jobs in the queue.
+* How old the most recent publish job was added.
+* How long ago the oldest publish job was added.
+* A quick look at any non-publishing workers in the queue.
+
+Click any of these many options to get to the full Publish Queue listing screen.
+
+(MT4 users: find Manage > Publish Queue Jobs in the System Dashboard, or
+Publish Queue Jobs in the System Overview menu in the upper-right of the
+screen.)
 
 A spinning icon displayed next to the Priority column indicates that job is
 currently being processed.
@@ -47,4 +56,4 @@ Movable Type: http://movabletype.org/
 Publish Queue Manager is licensed under the GPL.
 Copyright 2008, Six Apart, Ltd.
 Copyright 2009, Byrne Reese.
-Copyright 2009-2013, Endevver LLC
+Copyright 2009-2014, Endevver LLC
