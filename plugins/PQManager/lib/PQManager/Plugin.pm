@@ -670,22 +670,13 @@ sub pq_monitor_age_menu_label {
             limit     => 1,
         }
     );
-    my $insert_time = $job ? $job->insert_time : '';
+    my $insert_time = $job
+        ? $job->insert_time
+        : return "Couldn't load insert time?";
 
-    my $ts          = epoch2ts(undef, $insert_time);
-    my $date_format = MT::App::CMS::LISTING_DATE_FORMAT();
-    my $is_relative
-        = ( $app->user->date_format || 'relative' ) eq
-        'relative' ? 1 : 0;
-    my $relative_time = $is_relative
-        ? MT::Util::relative_date( $ts, time, undef )
-        : MT::Util::format_ts(
-            $date_format,
-            $ts,
-            undef,
-            $app->user ? $app->user->preferred_language
-            : undef
-        );
+    my $ts            = epoch2ts(undef, $insert_time);
+    my $date_format   = MT::App::CMS::LISTING_DATE_FORMAT();
+    my $relative_time = MT::Util::relative_date( $ts, time, undef );
 
     my $age_label = $order eq 'descend' ? 'Newest' : 'Oldest';
 
