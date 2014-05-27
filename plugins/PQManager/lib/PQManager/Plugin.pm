@@ -701,27 +701,22 @@ sub pq_monitor_other_jobs_menu_label {
         funcid => { not => $funcmap->funcid },
     }) || '0';
 
-    my @other_workers = $app->model('ts_funcmap')->load(
+    my @all_workers = $app->model('ts_funcmap')->load(
         {
             funcid => { not => $funcmap->funcid },
         },
-        {
-            join => MT::TheSchwartz::Job->join_on(
-                'funcid',
-                undef,
-                {
-                    unique => 1,
-                },
-            ),
-        }
     );
-    
     my @workers;
-    foreach my $other_worker (@other_workers) {
-        my $funcname = $other_worker->funcname;
-        # Strip the "::Worker::" out of the name simply to help conserve space.
-        $funcname =~ s/::Worker::/ /;
-        push @workers, '&bull; '.$funcname;
+    foreach my $worker (@all_workers) {
+        # Check to see if this worker has anything in the queue. If it does,
+        # note it.
+        if ( $app->model('ts_job')->exist({ funcid => $worker->funcid }) ) {
+            my $funcname = $worker->funcname;
+            # Strip the "::Worker::" out of the name simply to help conserve
+            # space.
+            $funcname =~ s/::Worker::/ /;
+            push @workers, '&bull; '.$funcname;
+        }
     }
 
     my $plural = scalar @workers == 1 ? '' : 's';
