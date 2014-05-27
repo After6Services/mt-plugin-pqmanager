@@ -453,13 +453,11 @@ sub list_properties {
                     return $fi->file_path;
                 }
                 else {
-                    # If this isn't a MT::Worker::Publish worker, then just
-                    # give up because there is no template associated.
-                    my $worker = MT->model('ts_funcmap')->load({
-                        funcid => $obj->funcid,
-                    });
-
-                    return '*' . $worker->funcname . '*';
+                    # If this isn't a MT::Worker::Publish worker, then there is
+                    # no file path info to return, but we can still return
+                    # potentially useful information.
+                    return '*Unique key: ' . $obj->uniqkey
+                        . ', Coalesce value: ' . $obj->coalesce . '*';
                 }
             },
             bulk_sort => sub {
