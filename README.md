@@ -8,9 +8,10 @@ what is happening at any given time!
 
 # Prerequisites
 
-* Movable Type 4.2 or later
 * Movable Type 5.2.6 or later
 * Movable Type 6 or later
+
+Compatibility with Movable Type 4.2x and 4.3x can be found in [version 1.2.5](https://github.com/endevver/mt-plugin-pqmanager/releases).
 
 # Installation
 

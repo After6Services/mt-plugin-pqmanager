@@ -26,14 +26,6 @@ applications:
           button: 1
     menus: $PQManager::PQManager::Plugin::menus
 
-# A feature of Melody Maker.
-status_widgets:
-  job_queue:
-    label: 'Job Queue'
-    count_handler: $PQManager::PQManager::Plugin::status_job_queue
-    mode: PQManager.list
-    args:
-      blog_id: 0
 
 listing_screens:
     ts_job:
