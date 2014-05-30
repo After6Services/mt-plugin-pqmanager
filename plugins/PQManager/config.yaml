@@ -1,31 +1,44 @@
-id: PQManager
-name: Publish Queue Manager
+id:          pqmanager
+key:         pqmanager
+name:        Publish Queue Manager
 description: Provides a management console for Publish Queue.
-version: 1.2.5
+version:     1.2.5
 author_name: Endevver
 author_link: http://endevver.com/
 plugin_link: https://github.com/endevver/mt-plugin-pqmanager
-static_version: 1
+
+settings:
+    republish_warning_blog_ids:
+        scope: system
+    republish_warning_message:
+        scope: system
+        default: "Are you sure you want to do this? There are good reasons to republish an entire archive or a whole blog, but in a well-optimized system it is rarely necessary. Check with the site administrator to see if there's a better way."
+
+system_config_template:
+    code: $PQMananger::PQManager::Plugin::system_config
+
+callbacks:
+    template_param.rebuild_confirm: $PQManager::PQManager::Plugin::xfrm_rebuild_confirm
+    post_build: $PQManager::PQManager::Plugin::callback_post_build
 
 applications:
-  cms:
-    methods:
-      PQManager.list:   $PQManager::PQManager::Plugin::mode_list_queue
-      PQManager.delete: $PQManager::PQManager::Plugin::mode_delete
-    list_actions:
-      ts_job:
-        priority:
-          label: Change Priority
-          code: $PQManager::PQManager::Plugin::mode_priority
-          input: 1
-          input_label: "Enter a priority to assign to the selected job(s), typically from 1 to 10 (1 = lowest, 10 = highest):"
-          no_prompt: 1
-        delete:
-          label: 'Delete'
-          mode: PQManager.delete
-          button: 1
-    menus: $PQManager::PQManager::Plugin::menus
-
+    cms:
+        methods:
+            PQManager.list:   $PQManager::PQManager::Plugin::mode_list_queue
+            PQManager.delete: $PQManager::PQManager::Plugin::mode_delete
+        list_actions:
+            ts_job:
+                priority:
+                    label: Change Priority
+                    code: $PQManager::PQManager::Plugin::mode_priority
+                    input: 1
+                    input_label: "Enter a priority to assign to the selected job(s), typically from 1 to 10 (1 = lowest, 10 = highest):"
+                    no_prompt: 1
+                delete:
+                    label: 'Delete'
+                    mode: PQManager.delete
+                    button: 1
+        menus: $PQManager::PQManager::Plugin::menus
 
 listing_screens:
     ts_job:
