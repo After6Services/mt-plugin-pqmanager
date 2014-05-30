@@ -582,4 +582,35 @@ sub pq_monitor_other_jobs_menu_label {
         . join("<br />", @workers);
 }
 
+# The `post_build` callback is run at the end of a publish job. Use it to log
+# big republish activity.
+sub callback_post_build {
+    my $app = MT->instance;
+    my $q   = $app->param();
+
+    # If there's an entry ID, then that means this is an entry being
+    # republished. Don't record that.
+    return if $app->mode ne 'rebuild';
+    return if $q->param('entry_id');
+
+    my $start_time = MT::Util::epoch2ts( $app->blog, $q->param('start_time') );
+    $start_time    = MT::Util::ts2iso( $app->blog, $start_time );
+    my $end_time   = MT::Util::epoch2ts( $app->blog, time );
+    $end_time      = MT::Util::ts2iso( $app->blog, $end_time );
+
+    my $blog_id    = $q->param('blog_id');
+    my $type       = $q->param('type');
+    $type =~ s/%2C/, /g;
+
+    $app->log({
+        level    => MT->model('log')->INFO(),
+        category => 'publish',
+        class    => 'pqmanager',
+        blog_id  => $blog_id,
+        author   => $app->user->id,
+        message  => "This blog was republished at start time $start_time and "
+            . "completed at $end_time, and republished the archive types $type.",
+    });
+}
+
 1;
