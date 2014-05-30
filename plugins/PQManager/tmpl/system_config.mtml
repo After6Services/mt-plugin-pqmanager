@@ -1,0 +1,19 @@
+<mtapp:setting
+    id="republish_warning_blog_ids"
+    label="Blog Republish Warnings"
+    hint="Display a warning when a user clicks to republish the blog. This doesn't prevent them from republishing, just warns them about what they are doing."
+    show_hint="1">
+    <select id="republish_warning_blog_ids" name="republish_warning_blog_ids"
+        multiple class="text full high">
+        <mt:Var name="options">
+    </select>
+</mtapp:setting>
+
+<mtapp:setting
+    id="republish_warning_message"
+    label="Republish Warning Message"
+    hint="Enter a message to be displayed in the Publish pop-up window. HTML and Movable Type template tags are allowed."
+    show_hint="1">
+    <textarea id="republish_warning_message" name="republish_warning_message"
+        class="text full low"><mt:Var name="republish_warning_message" escape="html"></textarea>
+</mtapp:setting>
