@@ -16,7 +16,7 @@ sub system_config {
     my ($plugin, $param, $scope) = @_;
     my $app = MT->instance;
     my $options = '';
-    
+
     # We want to sort both websites and blogs in the same way: A-Z.
     my $args = {
         sort      => 'name',   # Sort alphabetically by template name.
@@ -25,8 +25,12 @@ sub system_config {
 
     # Move any previously-selected blog IDs into an array.
     my @warning_blog_ids;
-    (@warning_blog_ids) = @{$param->{republish_warning_blog_ids}}
-        if $param->{republish_warning_blog_ids};
+    if ( ref $param->{republish_warning_blog_ids} eq 'ARRAY' ) {
+        (@warning_blog_ids) = @{$param->{republish_warning_blog_ids}};
+    }
+    else {
+        push @warning_blog_ids, $param->{republish_warning_blog_ids};
+    }
 
     # Put together a list of blogs and websites the user can select from.
     my $website_iter = $app->model('website')->load_iter(
@@ -641,9 +645,17 @@ sub pq_monitor_other_jobs_menu_label {
 # Show the rebuild warning on the popup dialog.
 sub xfrm_rebuild_confirm {
     my ($cb, $app, $param, $tmpl) = @_;
-    my $plugin   = $app->component('pqmanager');
-    my $config   = $plugin->get_config_hash('system');
-    my @blog_ids = $config->{republish_warning_blog_ids};
+    my $plugin = $app->component('pqmanager');
+    my $config = $plugin->get_config_hash('system');
+
+    # Move any previously-selected blog IDs into an array.
+    my @warning_blog_ids;
+    if ( ref $config->{republish_warning_blog_ids} eq 'ARRAY' ) {
+        (@warning_blog_ids) = @{$config->{republish_warning_blog_ids}};
+    }
+    else {
+        push @warning_blog_ids, $config->{republish_warning_blog_ids};
+    }
 
     # Blogs/websites are always republished at the blog/website level, so we can
     # assume that the $app->blog context is always available... right? Test just
@@ -652,7 +664,7 @@ sub xfrm_rebuild_confirm {
 
     # Give up if the current blog wasn't selected to display the warning
     # message.
-    return 1 unless grep $current_blog_id, @blog_ids;
+    return 1 unless grep /^$current_blog_id$/, @warning_blog_ids;
 
     # Find the submission form.
     my $old = q{<mt:include name="include/chromeless_header.tmpl">};
