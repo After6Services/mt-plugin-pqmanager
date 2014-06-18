@@ -2,7 +2,7 @@ id:          pqmanager
 key:         pqmanager
 name:        Publish Queue Manager
 description: Provides a management console for Publish Queue.
-version:     1.3.1
+version:     1.3.2
 author_name: Endevver
 author_link: http://endevver.com/
 plugin_link: https://github.com/endevver/mt-plugin-pqmanager

@@ -664,7 +664,9 @@ sub xfrm_rebuild_confirm {
 
     # Give up if the current blog wasn't selected to display the warning
     # message.
-    return 1 unless grep /^$current_blog_id$/, @warning_blog_ids;
+    return 1
+        unless grep( defined $_ && m/^$current_blog_id$/,
+                                        @warning_blog_ids );
 
     # Find the submission form.
     my $old = q{<mt:include name="include/chromeless_header.tmpl">};
