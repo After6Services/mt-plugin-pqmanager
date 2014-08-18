@@ -6,7 +6,6 @@
 #  Run "rptctl" for the basic usage
 #  or "rptctl --help" for the full manpage
 #
-VERSION=1.1
 
 PERLEXE=${PERLEXE:-/usr/local/bin/perl}
 PUBUSER="$USER"
@@ -453,6 +452,11 @@ check_processes() {
 
 parse_options "$@"
 [ $TEST ] && show_config
+
+if [[ -n "$RPTQUIT" ]]; then
+    echo "RPTQUIT is set on this server indicating RPT should not be run" > /dev/stderr
+    exit 0
+fi
 
 cd $MT_HOME
 [[ -n "$RPTUMASK" ]] && umask $RPTUMASK
