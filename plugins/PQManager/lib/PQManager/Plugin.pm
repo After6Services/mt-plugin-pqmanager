@@ -225,6 +225,8 @@ sub list_properties {
                 # Create a hash relating the jobid to the blog name.
                 my $jobid_blog = {};
                 foreach my $obj (@$objs) {
+                    next unless $obj;
+
                     my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
                         or next;
 
@@ -260,6 +262,10 @@ sub list_properties {
                 # build the Website/Blog Name labels.
                 my @out;
                 foreach my $obj (@$objs) {
+                    # Blank, no Website/Blog Name to report.
+                    push @out, ''
+                        if !$obj;
+
                     my $fi  = MT->model('fileinfo')->load( $obj->uniqkey );
                     if (!$fi) {
                         push @out, ''; # Blank, no Website/Blog Name to report.
@@ -291,6 +297,8 @@ sub list_properties {
                 # Create a hash relating the jobid to the blog name.
                 my $jobid_blog = {};
                 foreach my $obj (@$objs) {
+                    next unless $obj;
+
                     my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
                         or next;
 
@@ -343,6 +351,8 @@ sub list_properties {
                 # Create a hash relating the jobid to the template name.
                 my $jobid_tmplname = {};
                 foreach my $obj (@$objs) {
+                    next unless $obj;
+
                     my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
                         or next;
 
