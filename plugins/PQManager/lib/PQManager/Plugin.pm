@@ -560,9 +560,20 @@ sub pq_monitor_menu_label {
     my ($app)     = shift;
     my ($funcmap) = shift;
 
-    my $count = $app->model('ts_job')->count({
-        funcid => $funcmap->funcid,
+    # Count the number of publishing jobs in the queue, to be displayed in an
+    # orange-yellow dot next to the menu label. The obvious way to do this is
+    # to count all rows where `funcid` matches the Publish Worker:
+    #     my $count = $app->model('ts_job')->count({
+    #         funcid => $funcmap->funcid,
+    #     });
+    # However, this gets cached and so is often wrong. So instead, get all
+    # `ts_job` records and subtract out the non-Publish Worker rows, and now we
+    # have a good total!
+    my $count = $app->model('ts_job')->count();
+    my $non_pq_count = $app->model('ts_job')->count({
+        funcid => { not => $funcmap->funcid },
     });
+    $count -= $non_pq_count;
 
     return <<LABEL;
 <span title="There are currently $count items in the Publish Queue.">
