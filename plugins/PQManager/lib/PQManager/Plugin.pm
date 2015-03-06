@@ -148,6 +148,11 @@ sub list_properties {
             order   => 100,
             display => 'default',
             col     => 'jobid',
+            html    => sub {
+                my $prop = shift;
+                my ( $obj, $app, $opts ) = @_;
+                return $obj && $obj->jobid ? $obj->jobid : 'No jobid found.';
+            },
         },
         insert_time => {
             base    => '__virtual.date',
@@ -184,10 +189,11 @@ sub list_properties {
             html               => sub {
                 my $prop = shift;
                 my ( $obj, $app, $opts ) = @_;
-                my $html = $obj->priority;
-                
+                my $html = $obj && $obj->priority
+                    ? $obj->priority : 'No priority.';
+
                 # Include the spinning "working" indicator if it's been grabbed.
-                if ( $obj->grabbed_until ) {
+                if ( $obj && $obj->grabbed_until ) {
                     $html .= ' <img src="' . $app->static_path
                         . 'images/ani-rebuild.gif" width="20" height="20" />'
                 }
@@ -311,9 +317,27 @@ sub list_properties {
                 # Use the hash created above to sort by blog name and return the
                 # result!
                 return sort {
-                    lc( $jobid_blog->{ $a->jobid } )
-                         cmp lc( $jobid_blog->{ $b->jobid } )
+                    my $a_jobid = $a && $a->jobid ? $a->jobid : '';
+                    my $b_jobid = $b && $b->jobid ? $b->jobid : '';
+                    lc ($jobid_blog->{ $a_jobid })
+                         cmp lc($jobid_blog->{ $b_jobid })
                 } @$objs;
+            },
+            filter_editable => 1,
+            filter_label => 'Website/Blog Name',
+            filter_tmpl => '<mt:Var name="filter_form_single_select">',
+            base_type => 'single_select',
+            
+            single_select_options => sub {
+                my @options;
+                my $iter = MT->app->model('ts_funcmap')->load_iter();
+                while ( my $funcmap = $iter->() ) {
+                    push @options, {
+                        label => $funcmap->funcname,
+                        value => $funcmap->funcid,
+                    };
+                }
+                return \@options;
             },
         },
         template => {
