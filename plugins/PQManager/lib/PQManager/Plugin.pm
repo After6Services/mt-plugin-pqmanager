@@ -228,25 +228,28 @@ sub list_properties {
                 my $prop   = shift;
                 my ($objs) = @_;
 
-                # Create a hash relating the jobid to the blog name.
-                my $jobid_blog = {};
+                # Get the types of Workers in ts_funcmap.
+                my $workers = {};
+                my $iter = MT->instance->model('ts_funcmap')->load_iter();
+                while ( my $worker = $iter->() ) {
+                    $workers->{ $worker->funcid } = $worker->funcname;
+                }
+
+                # Create a hash relating the jobid to the Worker name.
+                my $jobid_worker = {};
                 foreach my $obj (@$objs) {
                     next unless $obj;
 
-                    my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
-                        or next;
-
-                    my $blog = MT->model('blog')->load( $fi->blog_id )
-                        or next;
-
-                    $jobid_blog->{ $obj->jobid } = $blog->name;
+                    $jobid_worker->{ $obj->jobid } = $workers->{ $obj->funcid };
                 }
 
-                # Use the hash created above to sort by blog name and return the
-                # result!
+                # Use the hash created above to sort by worker name and return
+                # the result!
                 return sort {
-                    lc( $jobid_blog->{ $a->jobid } )
-                        cmp lc( $jobid_blog->{ $b->jobid } )
+                    my $a_jobid = $a && $a->jobid ? $a->jobid : '';
+                    my $b_jobid = $b && $b->jobid ? $b->jobid : '';
+                    lc ($jobid_worker->{ $a_jobid })
+                         cmp lc($jobid_worker->{ $b_jobid })
                 } @$objs;
             },
             # Can't be filtered. Well, I think it *could* be if a join were done
