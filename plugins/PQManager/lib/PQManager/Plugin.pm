@@ -174,9 +174,21 @@ sub list_properties {
                         $date_format,
                         $ts,
                         undef,
-                        $app->user ? $app->user->preferred_language
-                        : undef
+                        $app->user ? $app->user->preferred_language : undef
                     );
+            },
+            bulk_sort => sub {
+                my $prop = shift;
+                my ($objs, $opts) = @_;
+                next unless $objs;
+
+                return sort {
+                    my $a_insert_time = $a && $a->insert_time
+                        ? $a->insert_time : 0;
+                    my $b_insert_time = $b && $b->insert_time
+                        ? $b->insert_time : 0;
+                    $a_insert_time <=> $b_insert_time;
+                } @$objs;
             },
         },
         priority => {
@@ -202,7 +214,7 @@ sub list_properties {
             },
         },
         worker => {
-            base      => '__virtual.string',
+            base      => '__virtual.single_select',
             label     => 'Worker',
             display   => 'optional',
             order     => 300,
@@ -220,7 +232,10 @@ sub list_properties {
 
                 my @out;
                 foreach my $obj (@$objs) {
-                    push @out, $func->{ $obj->funcid };
+                    my $funcid = $obj && $obj->funcid
+                        ? $obj->funcid : 'No worker.';
+
+                    push @out, $func->{ $funcid };
                 }
                 return @out;
             },
@@ -228,23 +243,22 @@ sub list_properties {
                 my $prop   = shift;
                 my ($objs) = @_;
 
-                # Get the types of Workers in ts_funcmap.
-                my $workers = {};
-                my $iter = MT->instance->model('ts_funcmap')->load_iter();
-                while ( my $worker = $iter->() ) {
-                    $workers->{ $worker->funcid } = $worker->funcname;
-                }
-
-                # Create a hash relating the jobid to the Worker name.
+                # Create a hash relating the jobid to the worker.
                 my $jobid_worker = {};
                 foreach my $obj (@$objs) {
                     next unless $obj;
 
-                    $jobid_worker->{ $obj->jobid } = $workers->{ $obj->funcid };
+                    my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
+                        or next;
+
+                    my $blog = MT->model('blog')->load( $fi->blog_id )
+                        or next;
+
+                    $jobid_worker->{ $obj->jobid } = $blog->name;
                 }
 
-                # Use the hash created above to sort by worker name and return
-                # the result!
+                # Use the hash created above to sort by blog name and return the
+                # result!
                 return sort {
                     my $a_jobid = $a && $a->jobid ? $a->jobid : '';
                     my $b_jobid = $b && $b->jobid ? $b->jobid : '';
@@ -252,9 +266,25 @@ sub list_properties {
                          cmp lc($jobid_worker->{ $b_jobid })
                 } @$objs;
             },
-            # Can't be filtered. Well, I think it *could* be if a join were done
-            # to the fileinfo table, but I havne't tried that.
-            filter_editable => 0,
+            single_select_options => sub {
+                my @options;
+                my $iter = MT->app->model('ts_funcmap')->load_iter();
+                while ( my $funcmap = $iter->() ) {
+                    push @options, {
+                        label => $funcmap->funcname,
+                        value => $funcmap->funcid,
+                    };
+                }
+                return \@options;
+            },
+            terms => sub {
+                my $prop = shift;
+                my $value = $prop->normalized_value(@_);
+
+                # Filters return the ts_funcmap funcid, and the funcid can be
+                # related to ts_job.ts_job_funcid.
+                return { 'funcid' => $value };
+            },
         },
         blog_name => {
             label        => 'Website/Blog Name',
@@ -272,8 +302,10 @@ sub list_properties {
                 my @out;
                 foreach my $obj (@$objs) {
                     # Blank, no Website/Blog Name to report.
-                    push @out, ''
-                        if !$obj;
+                    if (!$obj || !$obj->uniqkey) {
+                        push @out, '';
+                        next;
+                    }
 
                     my $fi  = MT->model('fileinfo')->load( $obj->uniqkey );
                     if (!$fi) {
@@ -352,12 +384,16 @@ sub list_properties {
                 my $prop = shift;
                 my ( $obj, $app, $opts ) = @_;
 
+                if (!$obj || !$obj->funcid) {
+                    return 'Object funcid not found.';
+                }
+
                 if ($obj->funcid == $worker_func->funcid) {
                     my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
-                        or return 'fileinfo record not found';
+                        or return 'Fileinfo record not found.';
 
                     my $tmpl = MT->model('template')->load( $fi->template_id )
-                        or return 'template not found';
+                        or return 'Template not found.';
 
                     return $tmpl->name;
                 }
@@ -392,8 +428,10 @@ sub list_properties {
                 # Use the hash created above to sort by template name and return
                 # the result!
                 return sort {
-                    lc( $jobid_tmplname->{ $a->jobid } )
-                        cmp lc( $jobid_tmplname->{ $b->jobid } )
+                    my $a_jobid = $a && $a->jobid ? $a->jobid : '';
+                    my $b_jobid = $b && $b->jobid ? $b->jobid : '';
+                    lc ($jobid_tmplname->{ $a_jobid })
+                         cmp lc($jobid_tmplname->{ $b_jobid })
                 } @$objs;
             },
             # Can't be filtered. Well, I think it *could* be if a join were done
@@ -403,15 +441,19 @@ sub list_properties {
         file_path => {
             base    => '__virtual.string',
             label   => 'File Path',
-            display => 'force',
+            display => 'default',
             order   => 600,
             html    => sub {
                 my $prop = shift;
                 my ( $obj, $app, $opts ) = @_;
 
+                if (!$obj || !$obj->funcid) {
+                    return 'Object funcid not found.';
+                }
+
                 if ($obj->funcid == $worker_func->funcid) {
                     my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
-                        or return 'fileinfo record not found';
+                        or return 'Fileinfo record not found.';
 
                     return $fi->file_path;
                 }
@@ -430,6 +472,8 @@ sub list_properties {
                 # Create a hash relating the jobid to the file path.
                 my $jobid_file = {};
                 foreach my $obj (@$objs) {
+                    next unless $obj;
+
                     my $fi  = MT->model('fileinfo')->load( $obj->uniqkey )
                         or next;
 
@@ -439,8 +483,10 @@ sub list_properties {
                 # Use the hash created above to sort by file path and return
                 # the result!
                 return sort {
-                    lc( $jobid_file->{ $a->jobid } )
-                        cmp lc( $jobid_file->{ $b->jobid } )
+                    my $a_jobid = $a && $a->jobid ? $a->jobid : '';
+                    my $b_jobid = $b && $b->jobid ? $b->jobid : '';
+                    lc ($jobid_file->{ $a_jobid })
+                         cmp lc($jobid_file->{ $b_jobid })
                 } @$objs;
             },
             # Can't be filtered. Well, I think it *could* be if a join were done
