@@ -883,6 +883,19 @@ sub pq_monitor_other_jobs_menu_label {
         . join("<br />", @workers);
 }
 
+# This plugin updates the Listing Framework date filters to include an "is
+# older than" option, which requires an update to the JS function `dateOption`,
+# in the template list_common.tmpl. This callback updates `dateOption` to make
+# the "days" field appear for the date field type.
+sub xfrm_list_common {
+    my ( $cb, $app, $tmpl ) = @_;
+    # Give up if not on the PQ Manager listing screen.
+    return unless $app->mode eq 'list' && $app->param('_type') eq 'ts_job';
+
+    my $html = "case 'days_older':\ncase 'days':";
+    $$tmpl =~ s{case 'days':}{$html};
+}
+
 # Show the rebuild warning on the popup dialog.
 sub xfrm_rebuild_confirm {
     my ($cb, $app, $param, $tmpl) = @_;

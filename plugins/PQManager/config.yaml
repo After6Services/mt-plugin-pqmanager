@@ -18,6 +18,7 @@ system_config_template:
     code: $PQMananger::PQManager::Plugin::system_config
 
 callbacks:
+    template_source.list_common: $PQManager::PQManager::Plugin::xfrm_list_common
     template_param.rebuild_confirm: $PQManager::PQManager::Plugin::xfrm_rebuild_confirm
     post_build: $PQManager::PQManager::Plugin::callback_post_build
 
