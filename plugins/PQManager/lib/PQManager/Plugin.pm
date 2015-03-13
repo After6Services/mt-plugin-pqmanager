@@ -162,7 +162,15 @@ sub list_properties {
             html    => sub {
                 my $prop = shift;
                 my ( $obj, $app, $opts ) = @_;
-                my $insert_time = $prop->raw(@_) or return '';
+
+                my $insert_time = '';
+                if ($obj && $obj->insert_time) {
+                    $insert_time = $obj->insert_time;
+                }
+                else {
+                    return '';
+                }
+
                 my $ts          = epoch2ts(undef, $insert_time);
                 my $date_format = MT::App::CMS::LISTING_DATE_FORMAT();
                 my $is_relative
@@ -189,6 +197,145 @@ sub list_properties {
                         ? $b->insert_time : 0;
                     $a_insert_time <=> $b_insert_time;
                 } @$objs;
+            },
+            filter_tmpl => sub {
+                ## since __trans macro doesn't work with including itself
+                ## recursively, so do translate by hand here.
+                my $prop  = shift;
+                my $label = '<mt:var name="label">';
+                my $tmpl
+                    = $prop->use_future
+                    ? 'filter_form_future_date'
+                    : 'filter_form_date';
+                my $opts
+                    = $prop->use_future
+                    ? '<mt:var name="future_date_filter_options">'
+                    : q{<select class="<mt:var name="type">-option filter-date">
+    <option value="range"><__trans phrase="is between" escape="js"></option>
+    <option value="days"><__trans phrase="is within the last" escape="js"></option>
+    <option value="days_older"><__trans phrase="is older than" escape="js"></option>
+    <option value="before"><__trans phrase="is before" escape="js"></option>
+    <option value="after"><__trans phrase="is after" escape="js"></option>
+</select>};
+                my $contents
+                    = $prop->use_future
+                    ? '<mt:var name="future_date_filter_contents">'
+                    : q{<span class="date-options">
+    <mt:setvarblock name="date_input_from"><input type="text" class="<mt:var name="type">-from text required date" /></mt:setvarblock>
+    <mt:setvarblock name="date_input_to"><input type="text" class="<mt:var name="type">-to text required date" /></mt:setvarblock>
+    <mt:setvarblock name="date_input_origin"><input type="text" class="<mt:var name="type">-origin text required date" /></mt:setvarblock>
+    <mt:setvarblock name="date_input_days"><input type="text" class="<mt:var name="type">-days text required digit days" /></mt:setvarblock>
+    <span class="date-option date"><__trans phrase="__FILTER_DATE_ORIGIN" params="<mt:var name="date_input_origin">" escape="js"></span>
+    <span class="date-option range"><__trans phrase="[_1] and [_2]" params="<mt:var name="date_input_from">%%<mt:var name="date_input_to">" escape="js"></span>
+    <span class="date-option days days_older"><__trans phrase="_FILTER_DATE_DAYS" params="<mt:var name="date_input_days">" escape="js"></span>
+</span>};
+                return MT->translate(
+                    '<mt:var name="[_1]"> [_2] [_3] [_4]',
+                    $tmpl, $label, $opts, $contents );
+            },
+            terms => sub {
+                my $prop = shift;
+                my ( $args, $db_terms, $db_args ) = @_;
+                my $col    = $prop->col;
+                my $option = $args->{option};
+                my $query;
+                my $blog = MT->app ? MT->app->blog : undef;
+
+                # Get the "days" value that was entered. It's not clear to
+                # me why this doesn't seem to exist at $args->{days} -- the
+                # below snippet is copied from MT::CMS::Filter::save to get
+                # the correct value.
+                my $app   = MT->instance;
+                my $q     = $app->param;
+                my $items = [];
+
+                if ( my $items_json = $q->param('items') ) {
+                    if ( $items_json =~ /^".*"$/ ) {
+                        $items_json =~ s/^"//;
+                        $items_json =~ s/"$//;
+                        $items_json = decode_js($items_json);
+                    }
+                    require JSON;
+                    my $json = JSON->new->utf8(0);
+                    $items = $json->decode($items_json);
+                }
+
+                # Finally, the "days" value that the user entered.
+                my $days = $items->[0]->{args}->{days};
+
+                # The `ts_job` table doesn't use a timestamp in the
+                # `insert_time` field; it instead uses the epoch value (time in
+                # seconds). So, keep the time in the epoch format.
+                my $now = time();
+
+                my $from   = $items->[0]->{args}->{from}   || undef;
+                my $to     = $items->[0]->{args}->{to}     || undef;
+                my $origin = $items->[0]->{args}->{origin} || undef;
+
+                # Ensure that a valid timestamp is created.
+                $from =~ s/\D//g;
+                $to =~ s/\D//g;
+                $origin =~ s/\D//g;
+                $from .= '000000' if $from;
+                $to   .= '235959' if $to;
+
+                # Convert the timestamp to epoch, because the insert_time field
+                # uses epoch. Note that $origin is modified and converted below
+                # in the elsif, as needed.
+                $from   = ts2epoch(undef, $from) if $from;
+                $to     = ts2epoch(undef, $to) if $to;
+
+                if ( 'range' eq $option ) {
+                    $query = [
+                        '-and',
+                        { op => '>=', value => $from },
+                        { op => '<=', value => $to },
+                    ];
+                }
+                elsif ( 'days' eq $option ) {
+                    $origin = time - ($days * 60 * 60 * 24);
+                    $query = [
+                        '-and',
+                        { op => '>', value => $origin },
+                        { op => '<', value => $now },
+                    ];
+                }
+                elsif ( 'days_older' eq $option ) {
+                    # Note that time() is used to generate a time since epoch.
+                    # Epoch is used in the insert_time table.
+                    $origin = time - ($days * 60 * 60 * 24);
+                    $query = {
+                        op    => '<',
+                        value => $origin
+                    };
+                }
+                elsif ( 'before' eq $option ) {
+                    $origin = ts2epoch(undef, $origin . '000000');
+                    $query = {
+                        op    => '<',
+                        value => $origin
+                    };
+                }
+                elsif ( 'after' eq $option ) {
+                    $origin = ts2epoch(undef, $origin . '235959');
+                    $query = {
+                        op    => '>',
+                        value => $origin
+                    };
+                }
+                elsif ( 'future' eq $option ) {
+                    $query = { op => '>', value => $now };
+                }
+                elsif ( 'past' eq $option ) {
+                    $query = { op => '<', value => $now };
+                }
+
+                if ( $prop->is_meta ) {
+                    $prop->join_meta( $db_args, $query );
+                }
+                else {
+                    return { $col => $query };
+                }
             },
         },
         priority => {
