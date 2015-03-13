@@ -4,7 +4,7 @@
 package PQManager::Plugin;
 
 use strict;
-use MT::Util qw( relative_date epoch2ts iso2ts );
+use MT::Util qw( relative_date format_ts epoch2ts ts2epoch iso2ts decode_js );
 use warnings;
 use Carp;
 
@@ -169,8 +169,8 @@ sub list_properties {
                     = ( $app->user->date_format || 'relative' ) eq
                     'relative' ? 1 : 0;
                 return $is_relative
-                    ? MT::Util::relative_date( $ts, time, undef )
-                    : MT::Util::format_ts(
+                    ? relative_date( $ts, time, undef )
+                    : format_ts(
                         $date_format,
                         $ts,
                         undef,
@@ -696,7 +696,7 @@ sub pq_monitor_age_menu_label {
 
     my $ts            = epoch2ts(undef, $insert_time);
     my $date_format   = MT::App::CMS::LISTING_DATE_FORMAT();
-    my $relative_time = MT::Util::relative_date( $ts, time, undef );
+    my $relative_time = relative_date( $ts, time, undef );
 
     my $age_label = $order eq 'descend' ? 'Newest' : 'Oldest';
 
@@ -800,10 +800,10 @@ sub callback_post_build {
     return if $app->mode ne 'rebuild';
     return if $q->param('entry_id');
 
-    my $start_time = MT::Util::epoch2ts( $app->blog, $q->param('start_time') );
-    $start_time    = MT::Util::ts2iso( $app->blog, $start_time );
-    my $end_time   = MT::Util::epoch2ts( $app->blog, time );
-    $end_time      = MT::Util::ts2iso( $app->blog, $end_time );
+    my $start_time = epoch2ts( $app->blog, $q->param('start_time') );
+    $start_time    = ts2iso( $app->blog, $start_time );
+    my $end_time   = epoch2ts( $app->blog, time );
+    $end_time      = ts2iso( $app->blog, $end_time );
 
     my $blog_id    = $q->param('blog_id');
     my $type       = $q->param('type');
