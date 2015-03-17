@@ -6,14 +6,21 @@ system to view, change priority, and delete publishing jobs from the built-in
 background. Keeping an eye on what is publishing is a great way to understand
 what is happening at any given time!
 
-If you're using this plugin you are likely working towards a well-optimized system, and one of the things you want to discourage other administrators and permissioned users from doing is republishing an entire blog. This plugin provides you opportunity to specify blogs and a message to warn users when they click the republish popup. Additionally, large republishing jobs (started from the republish popup window) are logged to the Activity Log so you can see their record.
+If you're using this plugin you are likely working towards a well-optimized
+system, and one of the things you want to discourage other administrators and
+permissioned users from doing is republishing an entire blog. This plugin
+provides you opportunity to specify blogs and a message to warn users when they
+click the republish popup. Additionally, large republishing jobs (started from
+the republish popup window) are logged to the Activity Log so you can see their
+record.
 
 # Prerequisites
 
 * Movable Type 5.2.6 or later
 * Movable Type 6 or later
 
-Compatibility with Movable Type 4.2x and 4.3x can be found in [version 1.2.5](https://github.com/endevver/mt-plugin-pqmanager/releases).
+Compatibility with Movable Type 4.2x and 4.3x can be found in
+[version 1.2.5](https://github.com/endevver/mt-plugin-pqmanager/releases).
 
 # Installation
 
@@ -23,7 +30,8 @@ http://tinyurl.com/easy-plugin-install
 
 # Usage
 
-The Publish Queue Manager provides an at-a-glance review of the contents of the Publish Queue by adding a "PQ Jobs" menu to Movable Type. Information provided:
+The Publish Queue Manager provides an at-a-glance review of the contents of the
+Publish Queue by adding a "PQ Jobs" menu to Movable Type. Information provided:
 
 * A highlighted count of the number of publishing-related jobs in the queue.
 * How old the most recent publish job was added.
@@ -51,11 +59,17 @@ track down errors so they can be fixed. Error records can be deleted, and
 deleting all records will cause the "Error log" menu item to not appear until a
 new error has been recorded.
 
-Configure whole blog publish warnings at the system level, by going to Tools > Plugins and choosing Publish Queue Manager > Settings. Select the blogs you want to warn users not to republish and specify a message to warn them with. The default warning message:
+Configure whole blog publish warnings at the system level, by going to Tools >
+Plugins and choosing Publish Queue Manager > Settings. Select the blogs you want
+to warn users not to republish and specify a message to warn them with. The
+default warning message:
 
-> Are you sure you want to do this? There are good reasons to republish an entire archive or a whole blog, but in a well-optimized system it is rarely necessary. Check with the site administrator to see if there's a better way.
+> Are you sure you want to do this? There are good reasons to republish an
+entire archive or a whole blog, but in a well-optimized system it is rarely
+necessary. Check with the site administrator to see if there's a better way.
 
-Republish actions are logged to the Activity Log. If you'd like to filter these, look for the class `pqmanager` and the category `publish`.
+Republish actions are logged to the Activity Log. If you'd like to filter these,
+look for the class `pqmanager` and the category `publish`.
 
 # Support
 
