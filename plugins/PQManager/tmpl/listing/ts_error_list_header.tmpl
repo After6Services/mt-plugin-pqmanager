@@ -1,0 +1,15 @@
+<mt:SetVarBlock name="content_header">
+    <p>The following is a list of job errors from Movable Type&rsquo;s task
+        framework, more commonly referred to as the Publish Queue.</p>
+</mt:SetVarBlock>
+
+<mt:SetVarBlock name="system_msg" append="1">
+    <mt:If name="request.saved_deleted">
+        <mtapp:statusmsg
+            id="saved-deleted"
+            class="success">
+            You have successfully deleted the job error record(s).
+        </mtapp:statusmsg>
+    </mt:If>
+</mt:SetVarBlock>
+

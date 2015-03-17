@@ -29,6 +29,7 @@ The Publish Queue Manager provides an at-a-glance review of the contents of the 
 * How old the most recent publish job was added.
 * How long ago the oldest publish job was added.
 * A quick look at any non-publishing workers in the queue.
+* If there are any items in the task error log.
 
 Click any of these many options to get to the full Publish Queue listing screen.
 
@@ -42,6 +43,13 @@ currently being processed.
 Deleting jobs and changing their priority is pretty simple: select a job (or
 jobs) and click the Delete button or choose the More Actions... Change Priority
 option.
+
+Clicking the "Error log" menu option provides insight into why and which jobs
+have failed. This information is also recorded in the Activity Log, however it's
+often difficult to pull the data out of there. Use the message provided to help
+track down errors so they can be fixed. Error records can be deleted, and
+deleting all records will cause the "Error log" menu item to not appear until a
+new error has been recorded.
 
 Configure whole blog publish warnings at the system level, by going to Tools > Plugins and choosing Publish Queue Manager > Settings. Select the blogs you want to warn users not to republish and specify a message to warn them with. The default warning message:
 

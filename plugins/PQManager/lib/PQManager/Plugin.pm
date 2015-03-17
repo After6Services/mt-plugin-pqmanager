@@ -751,6 +751,20 @@ sub menus {
                 ) || 0;
             },
         },
+        'pq_monitor:errors' => {
+            label => 'Error Log',
+            order => 30,
+            view  => [ "system", "blog", "website" ],
+            mode  => 'list',
+            args  => {
+                '_type'   => 'ts_error',
+                'blog_id' => '0', # Always blog ID 0, system.
+            },
+            permission => 'administer',
+            condition  => sub {
+                return $app->model('ts_error')->exist() || 0;
+            },
+        },
         # MT4
         'manage:pqueue' => {
             label      => 'Publish Queue Jobs',
