@@ -227,7 +227,8 @@ sub list_properties {
     <mt:setvarblock name="date_input_days"><input type="text" class="<mt:var name="type">-days text required digit days" /></mt:setvarblock>
     <span class="date-option date"><__trans phrase="__FILTER_DATE_ORIGIN" params="<mt:var name="date_input_origin">" escape="js"></span>
     <span class="date-option range"><__trans phrase="[_1] and [_2]" params="<mt:var name="date_input_from">%%<mt:var name="date_input_to">" escape="js"></span>
-    <span class="date-option days days_older"><__trans phrase="_FILTER_DATE_DAYS" params="<mt:var name="date_input_days">" escape="js"></span>
+        <mt:Ignore> Notice that the *hours* are specified here, not days. </mt:Ignore>
+    <span class="date-option days days_older"><mt:Var name="date_input_days" escape="js"> hours</span>
 </span>};
                 return MT->translate(
                     '<mt:var name="[_1]"> [_2] [_3] [_4]',
@@ -260,8 +261,10 @@ sub list_properties {
                     $items = $json->decode($items_json);
                 }
 
-                # Finally, the "days" value that the user entered.
-                my $days = $items->[0]->{args}->{days};
+                # Finally, the "days" value that the user entered. Remember
+                # that this was transformed to hours, so the user thinks they
+                # have actually entered number of hours.
+                my $hours = $items->[0]->{args}->{days};
 
                 # The `ts_job` table doesn't use a timestamp in the
                 # `insert_time` field; it instead uses the epoch value (time in
@@ -293,7 +296,7 @@ sub list_properties {
                     ];
                 }
                 elsif ( 'days' eq $option ) {
-                    $origin = time - ($days * 60 * 60 * 24);
+                    $origin = time - ($hours * 60 * 60);
                     $query = [
                         '-and',
                         { op => '>', value => $origin },
@@ -303,7 +306,7 @@ sub list_properties {
                 elsif ( 'days_older' eq $option ) {
                     # Note that time() is used to generate a time since epoch.
                     # Epoch is used in the insert_time table.
-                    $origin = time - ($days * 60 * 60 * 24);
+                    $origin = time - ($hours * 60 * 60);
                     $query = {
                         op    => '<',
                         value => $origin
