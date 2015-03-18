@@ -438,7 +438,6 @@ sub list_properties {
         },
         blog_name => {
             label        => 'Website/Blog Name',
-            filter_label => '__WEBSITE_BLOG_NAME',
             order        => 400,
             display      => 'default',
             site_name    => 1,
@@ -508,25 +507,37 @@ sub list_properties {
                          cmp lc($jobid_blog->{ $b_jobid })
                 } @$objs;
             },
-            filter_editable => 1,
-            filter_label => 'Website/Blog Name',
-            filter_tmpl => '<mt:Var name="filter_form_single_select">',
-            base_type => 'single_select',
-            
+            filter_editable       => 1,
+            filter_tmpl           => '<mt:Var name="filter_form_single_select">',
+            base_type             => 'single_select',
             single_select_options => sub {
                 my @options;
-                my $iter = MT->app->model('ts_funcmap')->load_iter();
-                while ( my $funcmap = $iter->() ) {
+                my $iter = MT->app->model('blog')->load_iter();
+                while ( my $blog = $iter->() ) {
                     push @options, {
-                        label => $funcmap->funcname,
-                        value => $funcmap->funcid,
+                        label => $blog->name,
+                        value => $blog->id,
                     };
                 }
                 return \@options;
             },
+            grep => sub {
+                my $prop = shift;
+                my ( $args, $objs, $opts ) = @_;
+                my $selected_blog_id = $args->{value};
+
+                my @results = grep {
+                    my $fi = MT->model('fileinfo')->load( $_->uniqkey );
+
+                    if ($fi && $fi->blog_id == $selected_blog_id) {
+                        1;
+                    }
+                } @$objs;
+
+                return @results;
+            },
         },
         template => {
-            base    => '__virtual.string',
             label   => 'Template',
             display => 'default',
             order   => 500,
@@ -584,12 +595,43 @@ sub list_properties {
                          cmp lc($jobid_tmplname->{ $b_jobid })
                 } @$objs;
             },
-            # Can't be filtered. Well, I think it *could* be if a join were done
-            # to the fileinfo table, but I havne't tried that.
-            filter_editable => 0,
+            filter_tmpl => '<mt:var name="filter_form_string">',
+            grep => sub {
+                my $prop = shift;
+                my ( $args, $objs, $opts ) = @_;
+                my $option = $args->{option};
+                my $query  = $args->{string};
+
+                my @results = grep {
+                    my $fi  = MT->model('fileinfo')->load( $_->uniqkey );
+
+                    if ($fi) {
+                        my $tmpl = MT->model('template')->load( $fi->template_id );
+
+                        my $tmpl_name = $tmpl->name || 'No template name.';
+
+                        if ( 'equal' eq $option && $tmpl_name =~ /^$query$/ ) {
+                            1;
+                        }
+                        elsif ( 'contains' eq $option && $tmpl_name =~ /$query/i ) {
+                            1;
+                        }
+                        elsif ( 'not_contains' eq $option && $tmpl_name !~ /$query/i ) {
+                            1;
+                        }
+                        elsif ( 'beginning' eq $option && $tmpl_name =~ /^$query/i ) {
+                            1;
+                        }
+                        elsif ( 'end' eq $option && $tmpl_name =~ /$query$/i ) {
+                            1;
+                        }
+                    }
+                } @$objs;
+
+                return @results;
+            },
         },
         file_path => {
-            base    => '__virtual.string',
             label   => 'File Path',
             display => 'default',
             order   => 600,
@@ -639,9 +681,39 @@ sub list_properties {
                          cmp lc($jobid_file->{ $b_jobid })
                 } @$objs;
             },
-            # Can't be filtered. Well, I think it *could* be if a join were done
-            # to the fileinfo table, but I havne't tried that.
-            filter_editable => 0,
+            filter_tmpl => '<mt:var name="filter_form_string">',
+            grep => sub {
+                my $prop = shift;
+                my ( $args, $objs, $opts ) = @_;
+                my $option = $args->{option};
+                my $query  = $args->{string};
+
+                my @results = grep {
+                    my $fi  = MT->model('fileinfo')->load( $_->uniqkey );
+
+                    if ($fi) {
+                        my $file_path = $fi->file_path;
+
+                        if ( 'equal' eq $option && $file_path =~ /^$query$/ ) {
+                            1;
+                        }
+                        elsif ( 'contains' eq $option && $file_path =~ /$query/i ) {
+                            1;
+                        }
+                        elsif ( 'not_contains' eq $option && $file_path !~ /$query/i ) {
+                            1;
+                        }
+                        elsif ( 'beginning' eq $option && $file_path =~ /^$query/i ) {
+                            1;
+                        }
+                        elsif ( 'end' eq $option && $file_path =~ /$query$/i ) {
+                            1;
+                        }
+                    }
+                } @$objs;
+
+                return @results;
+            },
         },
     };
 }
