@@ -530,11 +530,12 @@ sub list_properties {
                 my $selected_blog_id = $args->{value};
 
                 my @results = grep {
-                    return 0 unless $_ && $_->uniqkey;
-                    my $fi = MT->model('fileinfo')->load( $_->uniqkey );
+                    if ( $_ && $_->uniqkey ) {
+                        my $fi = MT->model('fileinfo')->load( $_->uniqkey );
 
-                    if ($fi && $fi->blog_id == $selected_blog_id) {
-                        1;
+                        if ($fi && $fi->blog_id == $selected_blog_id) {
+                            1;
+                        }
                     }
                 } @$objs;
 
@@ -607,30 +608,30 @@ sub list_properties {
                 my $query  = $args->{string};
 
                 my @results = grep {
-                    return 0 unless $_ && $_->uniqkey;
-
-                    if (
-                        my $fi = MT->model('fileinfo')->load( $_->uniqkey )
-                    ) {
+                    if ( $_ && $_->uniqkey ) {
                         if (
-                            my $tmpl = MT->model('template')->load( $fi->template_id )
+                            my $fi = MT->model('fileinfo')->load( $_->uniqkey )
                         ) {
-                            my $tmpl_name = $tmpl->name || 'No template name.';
+                            if (
+                                my $tmpl = MT->model('template')->load( $fi->template_id )
+                            ) {
+                                my $tmpl_name = $tmpl->name || 'No template name.';
 
-                            if ( 'equal' eq $option && $tmpl_name =~ /^$query$/ ) {
-                                1;
-                            }
-                            elsif ( 'contains' eq $option && $tmpl_name =~ /$query/i ) {
-                                1;
-                            }
-                            elsif ( 'not_contains' eq $option && $tmpl_name !~ /$query/i ) {
-                                1;
-                            }
-                            elsif ( 'beginning' eq $option && $tmpl_name =~ /^$query/i ) {
-                                1;
-                            }
-                            elsif ( 'end' eq $option && $tmpl_name =~ /$query$/i ) {
-                                1;
+                                if ( 'equal' eq $option && $tmpl_name =~ /^$query$/ ) {
+                                    1;
+                                }
+                                elsif ( 'contains' eq $option && $tmpl_name =~ /$query/i ) {
+                                    1;
+                                }
+                                elsif ( 'not_contains' eq $option && $tmpl_name !~ /$query/i ) {
+                                    1;
+                                }
+                                elsif ( 'beginning' eq $option && $tmpl_name =~ /^$query/i ) {
+                                    1;
+                                }
+                                elsif ( 'end' eq $option && $tmpl_name =~ /$query$/i ) {
+                                    1;
+                                }
                             }
                         }
                     }
@@ -697,27 +698,27 @@ sub list_properties {
                 my $query  = $args->{string};
 
                 my @results = grep {
-                    return 0 unless $_ && $_->uniqkey;
+                    if ( $_ && $_->uniqkey ) {
+                        my $fi  = MT->model('fileinfo')->load( $_->uniqkey );
 
-                    my $fi  = MT->model('fileinfo')->load( $_->uniqkey );
+                        if ($fi) {
+                            my $file_path = $fi->file_path;
 
-                    if ($fi) {
-                        my $file_path = $fi->file_path;
-
-                        if ( 'equal' eq $option && $file_path =~ /^$query$/ ) {
-                            1;
-                        }
-                        elsif ( 'contains' eq $option && $file_path =~ /$query/i ) {
-                            1;
-                        }
-                        elsif ( 'not_contains' eq $option && $file_path !~ /$query/i ) {
-                            1;
-                        }
-                        elsif ( 'beginning' eq $option && $file_path =~ /^$query/i ) {
-                            1;
-                        }
-                        elsif ( 'end' eq $option && $file_path =~ /$query$/i ) {
-                            1;
+                            if ( 'equal' eq $option && $file_path =~ /^$query$/ ) {
+                                1;
+                            }
+                            elsif ( 'contains' eq $option && $file_path =~ /$query/i ) {
+                                1;
+                            }
+                            elsif ( 'not_contains' eq $option && $file_path !~ /$query/i ) {
+                                1;
+                            }
+                            elsif ( 'beginning' eq $option && $file_path =~ /^$query/i ) {
+                                1;
+                            }
+                            elsif ( 'end' eq $option && $file_path =~ /$query$/i ) {
+                                1;
+                            }
                         }
                     }
                 } @$objs;
