@@ -512,7 +512,10 @@ sub list_properties {
             base_type             => 'single_select',
             single_select_options => sub {
                 my @options;
-                my $iter = MT->app->model('blog')->load_iter();
+                my $iter = MT->app->model('blog')->load_iter(
+                    undef,
+                    { sort => 'name', },
+                );
                 while ( my $blog = $iter->() ) {
                     push @options, {
                         label => $blog->name,
@@ -527,6 +530,7 @@ sub list_properties {
                 my $selected_blog_id = $args->{value};
 
                 my @results = grep {
+                    return 0 unless $_ && $_->uniqkey;
                     my $fi = MT->model('fileinfo')->load( $_->uniqkey );
 
                     if ($fi && $fi->blog_id == $selected_blog_id) {
@@ -603,27 +607,31 @@ sub list_properties {
                 my $query  = $args->{string};
 
                 my @results = grep {
-                    my $fi  = MT->model('fileinfo')->load( $_->uniqkey );
+                    return 0 unless $_ && $_->uniqkey;
 
-                    if ($fi) {
-                        my $tmpl = MT->model('template')->load( $fi->template_id );
+                    if (
+                        my $fi = MT->model('fileinfo')->load( $_->uniqkey )
+                    ) {
+                        if (
+                            my $tmpl = MT->model('template')->load( $fi->template_id )
+                        ) {
+                            my $tmpl_name = $tmpl->name || 'No template name.';
 
-                        my $tmpl_name = $tmpl->name || 'No template name.';
-
-                        if ( 'equal' eq $option && $tmpl_name =~ /^$query$/ ) {
-                            1;
-                        }
-                        elsif ( 'contains' eq $option && $tmpl_name =~ /$query/i ) {
-                            1;
-                        }
-                        elsif ( 'not_contains' eq $option && $tmpl_name !~ /$query/i ) {
-                            1;
-                        }
-                        elsif ( 'beginning' eq $option && $tmpl_name =~ /^$query/i ) {
-                            1;
-                        }
-                        elsif ( 'end' eq $option && $tmpl_name =~ /$query$/i ) {
-                            1;
+                            if ( 'equal' eq $option && $tmpl_name =~ /^$query$/ ) {
+                                1;
+                            }
+                            elsif ( 'contains' eq $option && $tmpl_name =~ /$query/i ) {
+                                1;
+                            }
+                            elsif ( 'not_contains' eq $option && $tmpl_name !~ /$query/i ) {
+                                1;
+                            }
+                            elsif ( 'beginning' eq $option && $tmpl_name =~ /^$query/i ) {
+                                1;
+                            }
+                            elsif ( 'end' eq $option && $tmpl_name =~ /$query$/i ) {
+                                1;
+                            }
                         }
                     }
                 } @$objs;
@@ -689,6 +697,8 @@ sub list_properties {
                 my $query  = $args->{string};
 
                 my @results = grep {
+                    return 0 unless $_ && $_->uniqkey;
+
                     my $fi  = MT->model('fileinfo')->load( $_->uniqkey );
 
                     if ($fi) {
