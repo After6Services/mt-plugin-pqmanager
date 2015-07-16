@@ -4,7 +4,7 @@
 package PQManager::Plugin;
 
 use strict;
-use MT::Util qw( relative_date format_ts epoch2ts ts2epoch iso2ts decode_js );
+use MT::Util qw( relative_date format_ts epoch2ts ts2epoch iso2ts ts2iso decode_js );
 use warnings;
 use Carp;
 
