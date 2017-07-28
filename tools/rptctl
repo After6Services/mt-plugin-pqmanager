@@ -25,7 +25,8 @@ EOU
 
 usage() {
 
-    [[ -n "$1" ]] && local error=-1 && echo "Error: $1"
+    [[ -n "$1" ]] && local error=-1 && echo "Error: $1" >> /dev/stderr
+
     cat <<EOU
 Usage: $(basename $0) [-v] [-l LOG] [-w #] [-m DIR] COMMAND
 Commands:
@@ -305,16 +306,16 @@ EOU
 }
 
 dispatch() {
-    while [ "$1" ]; do
-        [ $VERBOSE ] && { echo "$1"; echo; }
-        [ $TEST ]    || eval "$1";
+    while [[ -n "$1" ]]; do
+        [[ $VERBOSE -eq 1 ]]  && { echo "$1"; echo; } >> $RPTLOG
+        [[ $RPTTEST -eq 1 ]] || eval "$1" >> $RPTLOG;
         shift;
     done
 }
 
 progress() {
-    [ $VERBOSE ] || return
-    while [ "$1" ]; do echo ">>> $1"; shift; done
+    [[ $VERBOSE -eq 1 ]] || return
+    while [[ -n "$1" ]]; do echo ">>> $1"; shift; done
 }
 
 parse_options() {
@@ -328,7 +329,7 @@ parse_options() {
             w | workers  ) RPTWORKERS=$2; shift;;
             u | umask    ) RPTUMASK=$2; shift;;
             v | verbose  ) RPTVERBOSE=1;;
-            t | test     ) TEST=1;;
+            t | test     ) RPTTEST=1;;
             version      ) version_info;;
             help         ) man;;
             restart      ) RESTART=1;;
@@ -341,21 +342,19 @@ parse_options() {
     done
 
     # Aliases
-    [ $TEST ] && RPTVERBOSE=1
-    [ $RPTVERBOSE == 1 ] && VERBOSE=1
+    [[ $RPTTEST -eq 1 ]]    && RPTVERBOSE=1
+    [[ $RPTVERBOSE -eq 1 ]] && VERBOSE=1
 
-    [ "$MT_HOME" ]       || usage "MT home directory not specified"
-    [ -d "$MT_HOME" ]    || usage "$MT_HOME not found or is not a directory"
-    [ -e "$MT_HOME/$RPT" ] || usage "$MT_HOME/$RPT not found"
+    [[ -n "$MT_HOME" ]]      || usage "MT home directory not specified"
+    [[ -d "$MT_HOME" ]]      || usage "$MT_HOME not found or is not a directory"
+    [[ -e "$MT_HOME/$RPT" ]] || usage "$MT_HOME/$RPT not found"
     [[ "${RPTLOG:=/dev/null}" =~ ^/ ]] || RPTLOG="$MT_HOME/$RPTLOG"
 
-    if [[ $RPTDAEMONIZE == 1 ]]; then
+    if [[ $RPTDAEMONIZE -eq 1 ]]; then
         RPTARGS="$RPTARGS --load $RPTLOAD --daemon"
     fi
 
     export MT_HOME=${MT_HOME%%/}
-    export ORACLE_HOME=/opt/oracle/product/client_10.2.0.4.a
-    export LD_LIBRARY_PATH=/opt/oracle/product/client_10.2.0.4.a/lib
 }
 
 show_config() {
@@ -368,7 +367,7 @@ show_config() {
 start_process() {
     local args="$1";
     local msg="Starting run-periodic-tasks process"
-    [ $TEST ] || echo "$msg"  >> $RPTLOG
+    [[ $RPTTEST -eq 1 ]] || echo "$msg"  >> $RPTLOG
     progress "$msg"
     dispatch "MT_HOME='$MT_HOME' nohup nice -n $RPTNICE $PERLEXE -I$MT_HOME/lib -I$MT_HOME/extlib $MT_HOME/$RPT --verbose $args >> $RPTLOG 2>&1 &"
 }
@@ -377,7 +376,7 @@ stop() {
 
     [[ -n "$psoptions" ]] || check_processes
 
-    if [ "$psout" ]; then
+    if [[ -n "$psout" ]]; then
         PIDS=$(echo "$psout" | awk {'print $2'} | xargs )
         progress "run-periodic-tasks processes to kill:"
         [[ $VERBOSE ]] && echo "$psout"
@@ -397,7 +396,7 @@ start() {
     #
     # Ensure one RPT process running with --randomly flag
     #
-    if [[ "$procsrandom" == 0 ]]; then
+    if [[ $procsrandom -eq 0 ]]; then
         progress "Starting random process"
         ARGS="$RPTARGS --randomly"
         start_process "$ARGS"
@@ -451,10 +450,12 @@ check_processes() {
 }
 
 parse_options "$@"
-[ $TEST ] && show_config
+[[ $RPTTEST -eq 1 ]] && show_config
 
 if [[ -n "$RPTQUIT" ]]; then
-    echo "RPTQUIT is set on this server indicating RPT should not be run" > /dev/stderr
+    msg="RPTQUIT is set on this server indicating RPT should not be run"
+    echo $msg >> $RPTLOG
+    echo $msg >> /dev/stderr
     exit 0
 fi
 
